@@ -1,0 +1,11 @@
+year,continent,n_countries,mean_lifeExp,median_gdp
+1952,Africa,52,38.8,987
+1952,Americas,25,60.2,3048
+1952,Asia,33,42.9,1207
+1952,Europe,30,64.9,5142
+1952,Oceania,2,69.2,10298
+2007,Africa,52,54.6,1452
+2007,Americas,25,75.4,8948
+2007,Asia,33,69.4,4471
+2007,Europe,30,77.9,28054
+2007,Oceania,2,81.1,29810

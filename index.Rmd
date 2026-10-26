@@ -1,0 +1,133 @@
+---
+title: "Blog Post 7: Does Income Still Predict Life Expectancy? An Interactive Look, 1952–2007"
+author: "Your Name"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(here)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(plotly)
+library(knitr)
+
+# 如果数据/图还没生成，先运行脚本（保证 knit 时可完全复现）
+if (!file.exists(here("data", "processed", "gapminder_clean.csv"))) {
+  source(here("scripts", "01_prepare_data.R"))
+}
+# 运行绘图脚本：在内存中得到 p1, p2, p3，并把 html 保存到 results/figures/
+source(here("scripts", "02_make_plot.R"))
+
+df     <- read_csv(here("data", "processed", "gapminder_clean.csv"), show_col_types = FALSE)
+slopes <- read_csv(here("data", "processed", "yearly_slopes.csv"), show_col_types = FALSE)
+summ   <- read_csv(here("data", "processed", "summary_1952_2007.csv"), show_col_types = FALSE)
+chg    <- read_csv(here("data", "processed", "lifeexp_change_1952_2007.csv"), show_col_types = FALSE)
+```
+
+## 1. Question and Motivation
+
+Richer countries tend to have longer-lived citizens. This pattern is known as the **Preston curve**. But is this relationship a fixed law, or does it move over time? If the curve shifts upward, then countries at the *same* income level live longer today than they did in the past, which would suggest that technology, medicine, and public health matter in addition to income. And which countries break the pattern, and why?
+
+**Question:** How has the relationship between GDP per capita and life expectancy changed between 1952 and 2007, and which countries deviate most from it?
+
+This matters for development policy: if health gains come mostly from income growth, policy should focus on growth. If they come from knowledge and public health, low-income countries can improve health without waiting for economic growth.
+
+## 2. Data
+
+- **Source:** Gapminder Foundation, accessed through the R package [`gapminder`](https://CRAN.R-project.org/package=gapminder).
+- **Coverage:** 142 countries, observed every 5 years from 1952 to 2007 (12 time points, 1,704 country-year observations).
+- **Variables:** `gdpPercap` (GDP per capita, inflation-adjusted international dollars), `lifeExp` (life expectancy at birth, years), `pop` (population), `continent`.
+- **Processing:** `scripts/01_prepare_data.R` saves a raw copy to `data/raw/`, creates `log10(GDP per capita)` and the hover labels, and writes cleaned files to `data/processed/`.
+
+## 3. Method: How to Read the Figures
+
+- **Figure 1** is a scatterplot of GDP per capita (x, **log scale**) against life expectancy (y). Each bubble is a country; **size** is population; **color** is continent.
+- I use a log scale because a $1,000 increase matters far more for a country with $1,000 than for one with $30,000; on a log scale, equal distances mean equal *percentage* changes.
+- **Interactivity:** press ▶ or drag the **year slider** to watch the cloud move; **hover** over a bubble to see the country and its exact values; **click a continent in the legend** to hide it, or double-click to isolate it.
+- **Figure 2** shows population-weighted life expectancy by continent over time (click the legend to compare groups).
+- **Figure 3** compares each country's life expectancy in 1952 to 2007. Points on the dashed line did not change; points above gained.
+- To summarize the relationship numerically, I also fit a simple regression each year: $\text{lifeExp}_i = a_t + b_t \log_{10}(\text{GDPpc}_i) + \varepsilon_i$.
+
+## 4. Interactive Figure 1: Income and Life Expectancy Over Time
+
+```{r fig1, fig.width=9, fig.height=6}
+p1
+```
+
+## 5. Interactive Figure 2: Life Expectancy by Continent
+
+```{r fig2, fig.width=9, fig.height=5}
+p2
+```
+
+## 6. Interactive Figure 3: Who Gained the Most?
+
+```{r fig3, fig.width=8, fig.height=7}
+p3
+```
+
+## 7. Numerical Summary
+
+```{r tables}
+kable(slopes, caption = "Yearly regression of life expectancy on log10(GDP per capita)")
+kable(summ,   caption = "Continent summaries, 1952 and 2007 (life expectancy is population-weighted)")
+```
+
+```{r drops}
+# 每个国家相邻两期之间最大的一次寿命下降（程序化计算）
+drops <- df |>
+  arrange(country, year) |>
+  group_by(country, continent) |>
+  mutate(change_5yr = lifeExp - lag(lifeExp)) |>
+  slice_min(change_5yr, n = 1, with_ties = FALSE) |>
+  ungroup() |>
+  arrange(change_5yr) |>
+  select(country, continent, year, change_5yr) |>
+  slice_head(n = 8)
+kable(drops, digits = 1,
+      caption = "Largest 5-year drops in life expectancy (period ending in `year`)")
+```
+
+```{r numbers, include=FALSE}
+s52 <- slopes |> filter(year == 1952)
+s07 <- slopes |> filter(year == 2007)
+afr52 <- summ |> filter(year == 1952, continent == "Africa") |> pull(mean_lifeExp)
+afr07 <- summ |> filter(year == 2007, continent == "Africa") |> pull(mean_lifeExp)
+eur52 <- summ |> filter(year == 1952, continent == "Europe") |> pull(mean_lifeExp)
+eur07 <- summ |> filter(year == 2007, continent == "Europe") |> pull(mean_lifeExp)
+small <- chg |> slice_min(change, n = 3)
+```
+
+## 8. Interpretation
+
+**The relationship is strong and concave in levels.** In Figure 1, every year shows a clear upward pattern. In 1952 the correlation between log GDP per capita and life expectancy was `r s52$correlation`, and in 2007 it was `r s07$correlation`. The slope on log income was about `r s52$slope` years per tenfold increase in income in 1952 and `r s07$slope` in 2007. Income differences are strongly associated with life expectancy gaps, but with diminishing returns: among rich countries, extra income buys little extra life expectancy.
+
+**The whole curve shifts upward over time.** Dragging the slider shows that, at any given income level, 2007 bubbles sit higher than 1952 bubbles. A country with a given income today lives much longer than a country with the same income in 1952. This is evidence that factors beyond income, such as vaccines, antibiotics, and public health knowledge, have raised life expectancy. Note that this is descriptive, not causal.
+
+**Continents converge but gaps remain.** In Figure 2, population-weighted life expectancy in Africa rose from `r afr52` to `r afr07` years (1952–2007), while Europe went from `r eur52` to `r eur07`. Clicking the legend to isolate Africa shows a flattening after the 1990s.
+
+**Outliers are informative.** The table above and the hover labels in Figure 3 identify countries that moved against the trend. The smallest gains from 1952 to 2007 were in `r paste(small$country, collapse = ", ")`. Hovering in Figure 1 over the years just before and after these drops shows countries falling sharply while their incomes did not change much, which points to non-income shocks such as conflict, genocide, and the HIV/AIDS epidemic.
+
+> **TODO (你自己补充):** 在图 1 里悬停找 2–3 个你觉得最有意思的国家（例如收入很高但寿命相对较低，或收入很低但寿命较高的国家），写上你实际看到的数值和你的解释。
+
+## 9. Takeaway
+
+Income and life expectancy are strongly linked, but the link is neither fixed nor deterministic: the curve has shifted upward over half a century, so the same income buys a longer life today, and a handful of countries show that conflict and disease can overwhelm income gains. The interactivity makes the individual stories, the continent groups, and the movement through time visible in a way a single static graph could not.
+
+## 10. Limitations
+
+- Correlation is not causation; income, health, education, and institutions are jointly determined.
+- Country averages hide inequality within countries.
+- The data are observed only every five years, so short-lived shocks may be missed.
+- Gapminder income figures are model-based estimates, particularly for earlier years.
+
+## Reproducibility
+
+All data processing and figures are generated by scripts in `scripts/`; see `README.md` for replication steps.
