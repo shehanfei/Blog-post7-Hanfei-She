@@ -2,4 +2,4 @@
 source("scripts/00_install_packages.R")
 source("scripts/01_prepare_data.R")
 source("scripts/02_make_plot.R")
-rmarkdown::render("index.Rmd")
+rmarkdown::render("blog_post_7.Rmd")

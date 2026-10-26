@@ -115,24 +115,29 @@ small <- chg |> slice_min(change, n = 3)
 
 **Outliers are informative.** The table above and the hover labels in Figure 3 identify countries that moved against the trend. The smallest gains from 1952 to 2007 were in `r paste(small$country, collapse = ", ")`. Hovering in Figure 1 over the years just before and after these drops shows countries falling sharply while their incomes did not change much, which points to non-income shocks such as conflict, genocide, and the HIV/AIDS epidemic.
 
-**Angola: low life expectancy despite oil.** Angola's life expectancy rose only from `r round(ang52_le, 1)` years in 1952 to `r round(ang07_le, 1)` in 2007, a gain of about `r round(ang07_le - ang52_le, 1)` years, compared with a median gain of `r round(med_gain, 1)` years across all countries. Its income per capita was `r fmt(ang52_gdp)` dollars in 1952 and `r fmt(ang07_gdp)` in 2007, and it peaked at `r fmt(ang_peak$gdpPercap)` dollars in `r ang_peak$year` before falling to a low of `r fmt(ang_low$gdpPercap)` in `r ang_low$year`. In Figure 1, Angola's bubble moves very little vertically while the rest of the Africa cloud and the world move up, so it ends up well below the 2007 curve for its income level. The most likely explanation is the long civil war that followed independence in 1975 and lasted until 2002, which destroyed health infrastructure and displaced millions of people. Natural resource wealth (oil and diamonds) raised average income but did not translate into health outcomes for most people. This is a historical interpretation, not something the data can prove.
-
 ### Two cases that break the income–health pattern: Angola and Kuwait
 
 ```{r cases, include=FALSE}
-g <- function(ctry, yr, var) df |> filter(country == ctry, year == yr) |> pull({{ var }})
+# 自包含：自己读取数据，不依赖前面 chunk 里的对象
+library(dplyr); library(readr); library(here)
+df  <- read_csv(here("data", "processed", "gapminder_clean.csv"), show_col_types = FALSE)
+chg <- read_csv(here("data", "processed", "lifeexp_change_1952_2007.csv"), show_col_types = FALSE)
+
+g <- function(ctry, yr, var) df[[var]][df$country == ctry & df$year == yr]
 fmt <- function(x) format(round(x), big.mark = ",")
 
-ang52_gdp <- g("Angola", 1952, gdpPercap); ang07_gdp <- g("Angola", 2007, gdpPercap)
-ang52_le  <- g("Angola", 1952, lifeExp);   ang07_le  <- g("Angola", 2007, lifeExp)
-ang_peak  <- df |> filter(country == "Angola") |> slice_max(gdpPercap, n = 1)
-ang_low   <- df |> filter(country == "Angola") |> slice_min(gdpPercap, n = 1)
+ang52_gdp <- g("Angola", 1952, "gdpPercap"); ang07_gdp <- g("Angola", 2007, "gdpPercap")
+ang52_le  <- g("Angola", 1952, "lifeExp");   ang07_le  <- g("Angola", 2007, "lifeExp")
+ang <- df[df$country == "Angola", ]
+ang_peak <- ang[which.max(ang$gdpPercap), ]
+ang_low  <- ang[which.min(ang$gdpPercap), ]
 
-kuw52_gdp <- g("Kuwait", 1952, gdpPercap); kuw07_gdp <- g("Kuwait", 2007, gdpPercap)
-kuw52_le  <- g("Kuwait", 1952, lifeExp);   kuw07_le  <- g("Kuwait", 2007, lifeExp)
-kuw_rank52 <- df |> filter(year == 1952) |> mutate(r = rank(-gdpPercap)) |>
-  filter(country == "Kuwait") |> pull(r)
-kuw_low   <- df |> filter(country == "Kuwait") |> slice_min(gdpPercap, n = 1)
+kuw52_gdp <- g("Kuwait", 1952, "gdpPercap"); kuw07_gdp <- g("Kuwait", 2007, "gdpPercap")
+kuw52_le  <- g("Kuwait", 1952, "lifeExp");   kuw07_le  <- g("Kuwait", 2007, "lifeExp")
+d52 <- df[df$year == 1952, ]
+kuw_rank52 <- rank(-d52$gdpPercap)[d52$country == "Kuwait"]
+kuw <- df[df$country == "Kuwait", ]
+kuw_low <- kuw[which.min(kuw$gdpPercap), ]
 
 med_gain <- median(chg$change)
 ```
