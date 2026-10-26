@@ -1,6 +1,6 @@
 ---
 title: "Blog Post 7: Does Income Still Predict Life Expectancy? An Interactive Look, 1952–2007"
-author: "Your Name"
+author: "Hanfei She"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
@@ -115,7 +115,42 @@ small <- chg |> slice_min(change, n = 3)
 
 **Outliers are informative.** The table above and the hover labels in Figure 3 identify countries that moved against the trend. The smallest gains from 1952 to 2007 were in `r paste(small$country, collapse = ", ")`. Hovering in Figure 1 over the years just before and after these drops shows countries falling sharply while their incomes did not change much, which points to non-income shocks such as conflict, genocide, and the HIV/AIDS epidemic.
 
-> **TODO (你自己补充):** 在图 1 里悬停找 2–3 个你觉得最有意思的国家（例如收入很高但寿命相对较低，或收入很低但寿命较高的国家），写上你实际看到的数值和你的解释。
+**Angola: low life expectancy despite oil.** Angola's life expectancy rose only from `r round(ang52_le, 1)` years in 1952 to `r round(ang07_le, 1)` in 2007, a gain of about `r round(ang07_le - ang52_le, 1)` years, compared with a median gain of `r round(med_gain, 1)` years across all countries. Its income per capita was `r fmt(ang52_gdp)` dollars in 1952 and `r fmt(ang07_gdp)` in 2007, and it peaked at `r fmt(ang_peak$gdpPercap)` dollars in `r ang_peak$year` before falling to a low of `r fmt(ang_low$gdpPercap)` in `r ang_low$year`. In Figure 1, Angola's bubble moves very little vertically while the rest of the Africa cloud and the world move up, so it ends up well below the 2007 curve for its income level. The most likely explanation is the long civil war that followed independence in 1975 and lasted until 2002, which destroyed health infrastructure and displaced millions of people. Natural resource wealth (oil and diamonds) raised average income but did not translate into health outcomes for most people. This is a historical interpretation, not something the data can prove.
+
+### Two cases that break the income–health pattern: Angola and Kuwait
+
+```{r cases, include=FALSE}
+g <- function(ctry, yr, var) df |> filter(country == ctry, year == yr) |> pull({{ var }})
+fmt <- function(x) format(round(x), big.mark = ",")
+
+ang52_gdp <- g("Angola", 1952, gdpPercap); ang07_gdp <- g("Angola", 2007, gdpPercap)
+ang52_le  <- g("Angola", 1952, lifeExp);   ang07_le  <- g("Angola", 2007, lifeExp)
+ang_peak  <- df |> filter(country == "Angola") |> slice_max(gdpPercap, n = 1)
+ang_low   <- df |> filter(country == "Angola") |> slice_min(gdpPercap, n = 1)
+
+kuw52_gdp <- g("Kuwait", 1952, gdpPercap); kuw07_gdp <- g("Kuwait", 2007, gdpPercap)
+kuw52_le  <- g("Kuwait", 1952, lifeExp);   kuw07_le  <- g("Kuwait", 2007, lifeExp)
+kuw_rank52 <- df |> filter(year == 1952) |> mutate(r = rank(-gdpPercap)) |>
+  filter(country == "Kuwait") |> pull(r)
+kuw_low   <- df |> filter(country == "Kuwait") |> slice_min(gdpPercap, n = 1)
+
+med_gain <- median(chg$change)
+```
+
+```{r cases-table}
+df |>
+  filter(country %in% c("Angola", "Kuwait")) |>
+  select(country, year, gdpPercap, lifeExp) |>
+  mutate(gdpPercap = round(gdpPercap), lifeExp = round(lifeExp, 1)) |>
+  pivot_wider(names_from = country, values_from = c(gdpPercap, lifeExp)) |>
+  kable(caption = "Angola and Kuwait: GDP per capita (US$) and life expectancy (years)")
+```
+
+**Angola: low life expectancy despite oil.** Angola's life expectancy rose only from `r round(ang52_le, 1)` years in 1952 to `r round(ang07_le, 1)` in 2007, a gain of about `r round(ang07_le - ang52_le, 1)` years, compared with a median gain of `r round(med_gain, 1)` years across all countries. Its income per capita was `r fmt(ang52_gdp)` dollars in 1952 and `r fmt(ang07_gdp)` in 2007, and it peaked at `r fmt(ang_peak$gdpPercap)` dollars in `r ang_peak$year` before falling to a low of `r fmt(ang_low$gdpPercap)` in `r ang_low$year`. In Figure 1, Angola's bubble moves very little vertically while the rest of the Africa cloud and the world move up, so it ends up well below the 2007 curve for its income level. The most likely explanation is the long civil war that followed independence in 1975 and lasted until 2002, which destroyed health infrastructure and displaced millions of people. Natural resource wealth (oil and diamonds) raised average income but did not translate into health outcomes for most people. This is a historical interpretation, not something the data can prove.
+
+**Kuwait: very high income, but not the longest lives.** In 1952, Kuwait had the `r kuw_rank52`-ranked GDP per capita in the dataset, at `r fmt(kuw52_gdp)` dollars, yet life expectancy was only `r round(kuw52_le, 1)` years. By 2007 life expectancy had risen to `r round(kuw07_le, 1)`, a gain of `r round(kuw07_le - kuw52_le, 1)` years, even though income per capita *fell* to `r fmt(kuw07_gdp)` dollars (with a low of `r fmt(kuw_low$gdpPercap)` in `r kuw_low$year`). Kuwait therefore moves up and to the left in Figure 1, which is the opposite of what a "richer means healthier" story would predict. Two explanations fit this pattern. First, in 1952 Kuwait's oil income was new and was not yet converted into hospitals, clean water, and nutrition, so health lagged behind income. Second, GDP per capita for an oil exporter swings with oil prices and with the Gulf War of 1990–91, and a country's health improves gradually as institutions are built. For Kuwait, life expectancy responds to accumulated investment, not to current-year income.
+
+**What the two cases show together.** Angola is a country where income did not buy health because of war and unequal resource gains. Kuwait is a country where health caught up with income with a delay, and then continued to improve as income fell. In both cases, the position of a country on the income–health curve depends on history, institutions, and shocks, not only on income, so a single regression line would hide exactly the information that the hover labels reveal.
 
 ## 9. Takeaway
 
